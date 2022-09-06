@@ -3,10 +3,10 @@
 library(tidyverse)
 #library(lme4)
 #library(lmerTest)
-library(emmeans)
+#library(emmeans)
 library(sf)
-library(deltamapr)
-library(visreg)
+#library(deltamapr)
+#library(visreg)
 #library(MASS)
 #library(car)
 #library(lubridate)
@@ -14,7 +14,8 @@ library(brms)
 
 
 
-mypath <- "C:/Users/kbouma-gregson/OneDrive - DOI/Documents/DWR/HABs_paper"
+mypath <- "C:/Users/kbouma-gregson/OneDrive - DOI/Documents/DWR/HABs_paper/HABs-Publication/MicrocystisRatingModels_KBG"
+
 
 #import data with all the visual index data
 #load("data/data package/HABs.RData")
@@ -43,37 +44,75 @@ HABs2 <- HABs %>%
   filter(`Source` != "DOP") %>% # Remove DOP because they use a different method
   filter(Month >= 6 & Month <= 10) %>%  # limit to June - October
   filter(!is.na(Longitude) | !is.na(Latitude)) %>% 
+  rename("mc_rating" = Microcystis) %>% 
   mutate(YearF= as.factor(Year),
          MonthF= factor(Month, levels = c(6,7,8,9,10),
                          labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))   
 
+## Transform original 1-5 scale to None, Low, High
+HABs3 <- HABs2 %>%
+  mutate(mc_mod= ifelse(mc_rating == 1, "none",
+                        ifelse(mc_rating > 1 & mc_rating < 4, "low", "high")),
+         mc_mod= factor(mc_mod, ordered= TRUE, levels= c("none", "low", "high")))
+
+## Calculate maximum and minimum MC rating for each month
+HABs3.stat <-  HABs3 %>% 
+  group_by(Source, Station, YearF, MonthF) %>% 
+  summarize(mc_max= max(mc_mod),
+            mc_min= min(mc_mod)) %>% 
+  ungroup()
+  
 
 ## Spatial join
-HABs2.sf <-  HABs2 %>%
+HABs3.sf <-  HABs3.stat %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = st_crs(4326))
 
-HABs2.regions <-  st_join(HABs2.sf, Newregions) %>%
+HABs3.regions <-  st_join(HABs3.sf, Newregions) %>%
   filter(!is.na(Region))
 
+## Plot points
+# ggplot() +
+#   geom_sf(data= Newregions) +
+#   geom_sf(data= HABs2.sf) =
+#   coord_sf()
+# 
+# 
+# ggplot() +
+#   geom_sf(data= Newregions) +
+#   geom_sf(data= HABs2.regions) +
+#   coord_sf()
+
   
-ggplot() +
-  geom_sf(data= Newregions) +
-  geom_sf(data= HABs2.sf) =
-  coord_sf()
-
-
-ggplot() +
-  geom_sf(data= Newregions) +
-  geom_sf(data= HABs2.regions) +
-  coord_sf()
-
-  
-## Add water year types
-HABs.wyt <- HABs2.regions %>% 
+## Add water year types (Sacramento Valley Index)
+HABs.wyt <- HABs3.regions %>% 
   st_drop_geometry() %>% 
   select(-colors) %>% 
   left_join(., wy_SacIndex)
 
+
+
+#### SUMMARY TABLES ####
+unique(HABs.wyt$Station)
+
+table(HABs.wyt$Source)
+
+
+#### STATISTICS ####
+
+fit_max_mc1 <- brm(
+  formula = mc_max ~ 1 + cs(YearF) + Season + Region + (1|Station),
+  data = HABs.wyt,
+  family = acat("probit"),
+  chains= 4,
+  iter= 5000,
+  warmup= 1000,
+  cores= 4,
+  control = list(adapt_delta = 0.99)
+)
+save(fit_max_mc1, file= "Data/fit_max_mc1b.Rdata")
+load("Data/fit_max_mc1b.Rdata")
+summary(fit_max_mc1)
+#plot(fit_max_mc1)
 
 
 
