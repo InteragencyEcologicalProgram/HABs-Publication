@@ -11,7 +11,7 @@ library(sf)
 #library(car)
 #library(lubridate)
 library(brms)
-
+library(StanHeaders)
 
 
 mypath <- "C:/Users/kbouma-gregson/OneDrive - DOI/Documents/DWR/HABs_paper/HABs-Publication/MicrocystisRatingModels_KBG"
@@ -47,24 +47,31 @@ HABs2 <- HABs %>%
   rename("mc_rating" = Microcystis) %>% 
   mutate(YearF= as.factor(Year),
          MonthF= factor(Month, levels = c(6,7,8,9,10),
-                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))   
+                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))  
+
+
+## Add water year types (Sacramento Valley Index)
+HABs2.wyt <- HABs2 %>% 
+ # st_drop_geometry() %>% 
+  #select(-colors, -nudge) %>% 
+  left_join(., wy_SacIndex)
 
 ## Transform original 1-5 scale to None, Low, High
-HABs3 <- HABs2 %>%
+HABs3 <- HABs2.wyt %>%
   mutate(mc_mod= ifelse(mc_rating == 1, "none",
                         ifelse(mc_rating > 1 & mc_rating < 4, "low", "high")),
          mc_mod= factor(mc_mod, ordered= TRUE, levels= c("none", "low", "high")))
 
 ## Calculate maximum and minimum MC rating for each month
-HABs3.stat <-  HABs3 %>% 
-  group_by(Source, Station, YearF, MonthF) %>% 
+HABs3.MaxMin <-  HABs3 %>% 
+  group_by(Source, Station, Longitude, Latitude, YearF, MonthF, SacIndex, Yr_type, Drought) %>% 
   summarize(mc_max= max(mc_mod),
             mc_min= min(mc_mod)) %>% 
   ungroup()
   
 
 ## Spatial join
-HABs3.sf <-  HABs3.stat %>%
+HABs3.sf <-  HABs3.MaxMin %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = st_crs(4326))
 
 HABs3.regions <-  st_join(HABs3.sf, Newregions) %>%
@@ -83,12 +90,10 @@ HABs3.regions <-  st_join(HABs3.sf, Newregions) %>%
 #   coord_sf()
 
   
-## Add water year types (Sacramento Valley Index)
-HABs.wyt <- HABs3.regions %>% 
+## Format for statistical models
+HABs.stats <- HABs3.regions %>% 
   st_drop_geometry() %>% 
-  select(-colors) %>% 
-  left_join(., wy_SacIndex)
-
+  select(-colors, -nudge)
 
 
 #### SUMMARY TABLES ####
@@ -99,10 +104,10 @@ table(HABs.wyt$Source)
 
 #### STATISTICS ####
 
-fit_max_mc1 <- brm(
-  formula = mc_max ~ 1 + cs(YearF) + Season + Region + (1|Station),
-  data = HABs.wyt,
-  family = acat("probit"),
+fit_max_mc_SI.1 <- brm(
+  formula = mc_max ~ 1 + cs(Yr_type) + MonthF + Region + (1|Station),
+  data = HABs.stats,
+  family = cumulative("probit"),
   chains= 4,
   iter= 5000,
   warmup= 1000,
