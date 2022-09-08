@@ -1,6 +1,7 @@
 #Hab analysis - regional and water year comparisons
 
 library(tidyverse)
+library(lubridate)
 library(ggplot2)
 library(lemon)
 library(sf)
@@ -37,13 +38,14 @@ wy_DrSynth <- read_csv(here::here(mypath,"Data", "water_year_type.txt"))
 #### DATA FORMAT ####
 ## Clean up data
 HABs2 <- HABs %>% 
-  select(Source, Station, Latitude, Longitude, Date, Microcystis, Year, StationID, Month) %>% 
+  select(Source, Station, Latitude, Longitude, Date, Microcystis, Year, StationID, Month, -Year) %>% 
   filter(!is.na(Microcystis)) %>% 
   filter(`Source` != "DOP") %>% # Remove DOP because they use a different method
   filter(Month >= 5 & Month <= 12) %>%  # limit to June - October
   filter(!is.na(Longitude) | !is.na(Latitude)) %>% 
   rename("mc_rating" = Microcystis) %>% 
-  mutate(YearF= as.factor(Year),
+  mutate(Year= year(Date),
+         YearF= as.factor(Year),
          MonthF= factor(Month, levels = c(5, 6,7,8,9, 10, 11, 12),
                          labels = c("May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))  
 
@@ -53,6 +55,9 @@ HABs2.wyt <- HABs2 %>%
  # st_drop_geometry() %>% 
   #select(-colors, -nudge) %>% 
   left_join(., wy_SacIndex)
+
+
+
 
 ## Transform original 1-5 scale to None, Low, High
 HABs3 <- HABs2.wyt %>%
@@ -97,6 +102,10 @@ HABs.stats <- HABs3.regions %>%
 #### SUMMARY TABLES ####
 unique(HABs.stats$Station)
 table(HABs.stats$Source)
+HABs.stats %>% 
+  select(YearF, Yr_type) %>% 
+  distinct() %>% 
+  count(Yr_type)
 
 
 #### STATISTICS ####
@@ -133,44 +142,37 @@ fit_max_mc_SI.acat <- brm(
 
 ## Extract marginal effects
 max_mc1_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region", "MonthF"))
-max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type`
+max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type` %>% 
+  mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
+
+
 
 max_mc1_conditions.acat <- make_conditions(fit_max_mc_SI.acat, c("Region", "MonthF"))
-max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", condition= max_mc1_conditions.acat, categorical= TRUE)$`Yr_type`
+max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", condition= max_mc1_conditions.acat, categorical= TRUE)$`Yr_type` %>% 
+  mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 
 
 ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
-  #geom_point(aes(color= ds_year_type), position= position_dodge(width= 0.3), size= 3) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  #scale_fill_manual(values= year.colors, 
-  #                  name= "Water Year") +
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+                    name= "Water Year") +
   labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "cumu") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-  #scale_x_discrete(limits= c("low", "high"), labels= c("Low", "High")) +
-  #facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE, labeller= labeller(Region= as_labeller(region_labels))) +
   facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
-  #theme_doc +
-  #theme(legend.position= "top")
-#ggsave(last_plot(), filename= "MCrating_probs_LowHigh_Season.png", width= 6.5, height= 8.5, dpi= 300,
+  #ggsave(last_plot(), filename= "MCrating_probs_LowHigh_Season.png", width= 6.5, height= 8.5, dpi= 300,
 #       path= "Figures")
 
 
 ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
-  #geom_point(aes(color= ds_year_type), position= position_dodge(width= 0.3), size= 3) +
-  geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
+    geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  #scale_fill_manual(values= year.colors, 
-  #                  name= "Water Year") +
-  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "acat") +
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+                    name= "Water Year") +
+    labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "acat") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-  #scale_x_discrete(limits= c("low", "high"), labels= c("Low", "High")) +
-  #facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE, labeller= labeller(Region= as_labeller(region_labels))) +
-  facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
-#theme_doc +
-#theme(legend.position= "top")
-
+    facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
 
 
 
