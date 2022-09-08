@@ -112,12 +112,37 @@ fit_max_mc_SI.1 <- brm(
   iter= 5000,
   warmup= 1000,
   cores= 4,
-  control = list(adapt_delta = 0.99)
-)
-save(fit_max_mc1, file= "Data/fit_max_mc1b.Rdata")
-load("Data/fit_max_mc1b.Rdata")
-summary(fit_max_mc1)
-#plot(fit_max_mc1)
+  backend = "cmdstanr")
+  #control = list(adapt_delta = 0.99)
+
+
+#save(fit_max_mc_SI.1, file= "Data/fit_max_mc1b.Rdata")
+#load("Data/fit_max_mc1b.Rdata")
+#summary(fit_max_mc_SI.1)
+#plot(fit_max_mc_SI.1)
+
+## Extract marginal effects
+max_mc1_conditions <- make_conditions(fit_max_mc_SI.1, c("Region", "MonthF"))
+max_mc1_effects <- conditional_effects(fit_max_mc_SI.1, "Yr_type", condition= max_mc1_conditions, categorical= TRUE)$`Yr_type`
+
+library(lemon)
+ggplot(max_mc1_effects, aes(x= cats__, y= estimate__, group= Yr_type)) +
+  #geom_point(aes(color= ds_year_type), position= position_dodge(width= 0.3), size= 3) +
+  geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
+  geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
+  #scale_fill_manual(values= year.colors, 
+  #                  name= "Water Year") +
+  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
+  scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
+  #scale_x_discrete(limits= c("low", "high"), labels= c("Low", "High")) +
+  #facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE, labeller= labeller(Region= as_labeller(region_labels))) +
+  facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
+  #theme_doc +
+  #theme(legend.position= "top")
+#ggsave(last_plot(), filename= "MCrating_probs_LowHigh_Season.png", width= 6.5, height= 8.5, dpi= 300,
+#       path= "Figures")
+
+
 
 
 
