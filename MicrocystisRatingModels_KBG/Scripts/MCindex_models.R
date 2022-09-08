@@ -180,8 +180,8 @@ ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "cumu") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
   facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
-  #ggsave(last_plot(), filename= "MCrating_probs_LowHigh_Season.png", width= 6.5, height= 8.5, dpi= 300,
-#       path= "Figures")
+  ggsave(last_plot(), filename= "MCrating_RegionMonth.png", width= 20, height= 16, dpi= 300,
+       path= here::here(mypath, "Figures"))
 
 ggplot(max_mc1_effects.region.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
@@ -191,7 +191,8 @@ ggplot(max_mc1_effects.region.cumu, aes(x= cats__, y= estimate__, group= Yr_type
   labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
   facet_rep_grid(~ Region, repeat.tick.labels = TRUE) 
-
+ggsave(last_plot(), filename= "MCrating_Region.png", width= 10, height= 4, dpi= 300,
+       path= here::here(mypath, "Figures"))
 
 ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
     geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
@@ -200,7 +201,8 @@ ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
                     name= "Water Year") +
     labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "acat") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-    facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
+    facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE)
+
 
 
 
