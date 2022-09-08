@@ -1,17 +1,20 @@
 #Hab analysis - regional and water year comparisons
 
 library(tidyverse)
+library(ggplot2)
+library(lemon)
+library(sf)
+library(brms)
+
+#library(StanHeaders)
 #library(lme4)
 #library(lmerTest)
 #library(emmeans)
-library(sf)
 #library(deltamapr)
 #library(visreg)
 #library(MASS)
 #library(car)
 #library(lubridate)
-library(brms)
-library(StanHeaders)
 
 
 mypath <- "C:/Users/kbouma-gregson/OneDrive - DOI/Documents/DWR/HABs_paper/HABs-Publication/MicrocystisRatingModels_KBG"
@@ -31,23 +34,18 @@ wy_SacIndex <- read_csv(here::here(mypath,"Data", "WaterYearAssignments.csv")) %
 wy_DrSynth <- read_csv(here::here(mypath,"Data", "water_year_type.txt"))
 
 
-#import shapefile with regions
-#regions = st_read("data/HABregions.shp")
-#regions = st_read(here::here(mypath,"Data", "HABregions", "HABregions.shp"))
-
-
 #### DATA FORMAT ####
 ## Clean up data
 HABs2 <- HABs %>% 
   select(Source, Station, Latitude, Longitude, Date, Microcystis, Year, StationID, Month) %>% 
   filter(!is.na(Microcystis)) %>% 
   filter(`Source` != "DOP") %>% # Remove DOP because they use a different method
-  filter(Month >= 6 & Month <= 10) %>%  # limit to June - October
+  filter(Month >= 5 & Month <= 12) %>%  # limit to June - October
   filter(!is.na(Longitude) | !is.na(Latitude)) %>% 
   rename("mc_rating" = Microcystis) %>% 
   mutate(YearF= as.factor(Year),
-         MonthF= factor(Month, levels = c(6,7,8,9,10),
-                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))  
+         MonthF= factor(Month, levels = c(5, 6,7,8,9, 10, 11, 12),
+                         labels = c("May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))  
 
 
 ## Add water year types (Sacramento Valley Index)
@@ -97,14 +95,13 @@ HABs.stats <- HABs3.regions %>%
 
 
 #### SUMMARY TABLES ####
-unique(HABs.wyt$Station)
-
-table(HABs.wyt$Source)
+unique(HABs.stats$Station)
+table(HABs.stats$Source)
 
 
 #### STATISTICS ####
 
-fit_max_mc_SI.1 <- brm(
+fit_max_mc_SI.cumu <- brm(
   formula = mc_max ~ 1 + cs(Yr_type) + MonthF + Region + (1|Station),
   data = HABs.stats,
   family = cumulative("probit"),
@@ -115,6 +112,19 @@ fit_max_mc_SI.1 <- brm(
   backend = "cmdstanr")
   #control = list(adapt_delta = 0.99)
 
+# No difference in output between cumulative() and acat() family
+fit_max_mc_SI.acat <- brm(
+  formula = mc_max ~ 1 + cs(Yr_type) + MonthF + Region + (1|Station),
+  data = HABs.stats,
+  family = acat("probit"),
+  chains= 4,
+  iter= 5000,
+  warmup= 1000,
+  cores= 4,
+  backend = "cmdstanr")
+#control = list(adapt_delta = 0.99)
+
+
 
 #save(fit_max_mc_SI.1, file= "Data/fit_max_mc1b.Rdata")
 #load("Data/fit_max_mc1b.Rdata")
@@ -122,17 +132,21 @@ fit_max_mc_SI.1 <- brm(
 #plot(fit_max_mc_SI.1)
 
 ## Extract marginal effects
-max_mc1_conditions <- make_conditions(fit_max_mc_SI.1, c("Region", "MonthF"))
-max_mc1_effects <- conditional_effects(fit_max_mc_SI.1, "Yr_type", condition= max_mc1_conditions, categorical= TRUE)$`Yr_type`
+max_mc1_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region", "MonthF"))
+max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type`
 
-library(lemon)
-ggplot(max_mc1_effects, aes(x= cats__, y= estimate__, group= Yr_type)) +
+max_mc1_conditions.acat <- make_conditions(fit_max_mc_SI.acat, c("Region", "MonthF"))
+max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", condition= max_mc1_conditions.acat, categorical= TRUE)$`Yr_type`
+
+
+
+ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   #geom_point(aes(color= ds_year_type), position= position_dodge(width= 0.3), size= 3) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
   #scale_fill_manual(values= year.colors, 
   #                  name= "Water Year") +
-  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
+  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "cumu") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
   #scale_x_discrete(limits= c("low", "high"), labels= c("Low", "High")) +
   #facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE, labeller= labeller(Region= as_labeller(region_labels))) +
@@ -142,6 +156,20 @@ ggplot(max_mc1_effects, aes(x= cats__, y= estimate__, group= Yr_type)) +
 #ggsave(last_plot(), filename= "MCrating_probs_LowHigh_Season.png", width= 6.5, height= 8.5, dpi= 300,
 #       path= "Figures")
 
+
+ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
+  #geom_point(aes(color= ds_year_type), position= position_dodge(width= 0.3), size= 3) +
+  geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
+  geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
+  #scale_fill_manual(values= year.colors, 
+  #                  name= "Water Year") +
+  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "acat") +
+  scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
+  #scale_x_discrete(limits= c("low", "high"), labels= c("Low", "High")) +
+  #facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE, labeller= labeller(Region= as_labeller(region_labels))) +
+  facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
+#theme_doc +
+#theme(legend.position= "top")
 
 
 
