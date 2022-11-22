@@ -1,0 +1,12 @@
+ds_year	ds_year_type	barrier
+2011	Wet	no
+2012	Neutral	no
+2013	Drought	no
+2014	Drought	no
+2015	Drought	yes
+2016	Neutral	no
+2017	Wet	no
+2018	Neutral	no
+2019	Wet	no
+2020	Drought	no
+2021	Drought	yes
