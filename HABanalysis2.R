@@ -42,29 +42,31 @@ load("NewHABregions.RData")
 
 ##################################################################
 #check a few plots for outliers
-ggplot(HABs, aes(x = Temperature)) + geom_histogram()
-summary(HABs$Temperature)
-filter(HABs, Temperature <5)
-#missing 120 rows, and some of those are 0s, definitely wrong.
-HABs = filter(HABs, Temperature >5)
+# ggplot(HABs, aes(x = Temperature)) + geom_histogram()
+# summary(HABs$Temperature)
+# filter(HABs, Temperature <5)
+# #missing 120 rows, and some of those are 0s, definitely wrong.
+# HABs = filter(HABs, Temperature >5)
+#
+# ggplot(HABs, aes(x = Secchi)) + geom_histogram()
+# summary(HABs$Secchi)
+# test =filter(HABs, Secchi <10)
+#
+# group_by(HABs, Source) %>%
+#   summarize(secm = min(Secchi, na.rm = T), secM = max(Secchi, na.rm = T))
+#
+# #Ugh, definitely some more rows where Secchi is in meters, not centemeters. But its not consistent!
+#
+# HABs = mutate(HABs, Secchi = case_when(Secchi <5 ~Secchi *100,
+#                                        TRUE ~ Secchi))
+# summary(HABs$Secchi)
+# summary(HABs$Temperature)
+#
+# #Remove DOP data because it' scrap
+#
+# HABs = filter(HABs, Source != "DOP")
 
-ggplot(HABs, aes(x = Secchi)) + geom_histogram()
-summary(HABs$Secchi)
-test =filter(HABs, Secchi <10)
-
-group_by(HABs, Source) %>%
-  summarize(secm = min(Secchi, na.rm = T), secM = max(Secchi, na.rm = T))
-
-#Ugh, definitely some more rows where Secchi is in meters, not centemeters. But its not consistent!
-
-HABs = mutate(HABs, Secchi = case_when(Secchi <5 ~Secchi *100,
-                                       TRUE ~ Secchi))
-summary(HABs$Secchi)
-summary(HABs$Temperature)
-
-#Remove DOP data because it' scrap
-
-HABs = filter(HABs, Source != "DOP")
+# save(HABs, file = "HABs.RData")
 
 #convert HAB data to a spatial object and plot it
 HABssf = filter(HABs, !is.na(Longitude), !is.na(Latitude)) %>%
