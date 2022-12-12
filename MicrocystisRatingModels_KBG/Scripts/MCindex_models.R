@@ -46,7 +46,7 @@ HABs2 <- HABs %>%
   rename("mc_rating" = Microcystis) %>% 
   mutate(Year= year(Date),
          YearF= as.factor(Year),
-         MonthF= factor(Month, levels = c(5, 6,7,8,9, 10, 11, 12),
+         MonthF= factor(Month, levels = c(5, 6, 7, 8, 9, 10, 11, 12),
                          labels = c("May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))  
 
 
@@ -110,6 +110,21 @@ HABs.stats %>%
 
 #### STATISTICS ####
 
+## MODEL USED IN THE FINAL MANUSCRIPT ##
+fit_max_mc_SI.region.cumu <- brm(
+  formula = mc_max ~ 1 + cs(Yr_type) + Region + (1|Station),
+  data = filter(HABs.stats, MonthF %in% c("Jun", "Jul", "Aug", "Sep", "Oct")),
+  family = cumulative("probit"),
+  chains= 4,
+  iter= 5000,
+  warmup= 1000,
+  cores= 4,
+  backend = "cmdstanr")
+#control = list(adapt_delta = 0.99)
+
+
+
+## The SI.cumum and acat models were explored, but not used for the figure in the manuscript.
 fit_max_mc_SI.cumu <- brm(
   formula = mc_max ~ 1 + cs(Yr_type) + MonthF + Region + (1|Station),
   data = HABs.stats,
@@ -133,16 +148,8 @@ fit_max_mc_SI.acat <- brm(
   backend = "cmdstanr")
 #control = list(adapt_delta = 0.99)
 
-fit_max_mc_SI.region.cumu <- brm(
-  formula = mc_max ~ 1 + cs(Yr_type) + Region + (1|Station),
-  data = HABs.stats,
-  family = cumulative("probit"),
-  chains= 4,
-  iter= 5000,
-  warmup= 1000,
-  cores= 4,
-  backend = "cmdstanr")
-#control = list(adapt_delta = 0.99)
+
+
 
 
 
@@ -152,16 +159,20 @@ fit_max_mc_SI.region.cumu <- brm(
 #plot(fit_max_mc_SI.1)
 
 ## Extract marginal effects
+
+## Model used for manuscript
+max_mc1_conditions.region.cumu <- make_conditions(fit_max_mc_SI.region.cumu, c("Region"))
+max_mc1_effects.region.cumu <- conditional_effects(fit_max_mc_SI.region.cumu, "Yr_type", condition= max_mc1_conditions.region.cumu, categorical= TRUE)$`Yr_type` %>% 
+  mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
+##
+
+
 max_mc1_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region", "MonthF"))
 max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type` %>% 
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 max_mc2_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region"))
 max_mc2_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc2_conditions.cumu, categorical= TRUE)$`Yr_type` %>% 
-  mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
-
-max_mc1_conditions.region.cumu <- make_conditions(fit_max_mc_SI.region.cumu, c("Region"))
-max_mc1_effects.region.cumu <- conditional_effects(fit_max_mc_SI.region.cumu, "Yr_type", condition= max_mc1_conditions.region.cumu, categorical= TRUE)$`Yr_type` %>% 
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 
@@ -172,6 +183,22 @@ max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", cond
 
 
 
+## Figure used in manuscript ##
+ggplot(max_mc1_effects.region.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
+  geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
+  geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+                    name= "Water Year") +
+  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
+  scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
+  facet_rep_wrap(~ Region, ncol= 2, repeat.tick.labels = TRUE) +
+  theme(legend.position = "top")
+ggsave(last_plot(), filename= "MCrating_Region_JunOct.png", width= 6.5, height= 8, dpi= 300,
+       path= here::here(mypath, "Figures"))
+
+
+
+#### OLD FIGURES ####
 ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
@@ -183,16 +210,6 @@ ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   ggsave(last_plot(), filename= "MCrating_RegionMonth.png", width= 20, height= 16, dpi= 300,
        path= here::here(mypath, "Figures"))
 
-ggplot(max_mc1_effects.region.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
-  geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
-  geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
-                    name= "Water Year") +
-  labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
-  scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-  facet_rep_grid(~ Region, repeat.tick.labels = TRUE) 
-ggsave(last_plot(), filename= "MCrating_Region.png", width= 10, height= 4, dpi= 300,
-       path= here::here(mypath, "Figures"))
 
 ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
     geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
