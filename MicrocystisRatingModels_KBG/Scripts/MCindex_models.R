@@ -29,31 +29,31 @@ load(here::here(mypath,"Data", "HABs.RData"))
 load(here::here(mypath,"Data", "NewHABregions.RData"))
 
 # Import water year types
-wy_SacIndex <- read_csv(here::here(mypath,"Data", "WaterYearAssignments.csv")) %>% 
-  filter(Year >= 2007) %>% 
+wy_SacIndex <- read_csv(here::here(mypath,"Data", "WaterYearAssignments.csv")) %>%
+  filter(Year >= 2007) %>%
   rename("SacIndex"= Index)
 wy_DrSynth <- read_csv(here::here(mypath,"Data", "water_year_type.txt"))
 
 
 #### DATA FORMAT ####
 ## Clean up data
-HABs2 <- HABs %>% 
-  select(Source, Station, Latitude, Longitude, Date, Microcystis, Year, StationID, Month, -Year) %>% 
-  filter(!is.na(Microcystis)) %>% 
+HABs2 <- HABs %>%
+  dplyr::select(Source, Station, Latitude, Longitude, Date, Microcystis, Year, StationID, Month, -Year) %>%
+  filter(!is.na(Microcystis)) %>%
   filter(`Source` != "DOP") %>% # Remove DOP because they use a different method
   filter(Month >= 5 & Month <= 12) %>%  # limit to June - October
-  filter(!is.na(Longitude) | !is.na(Latitude)) %>% 
-  rename("mc_rating" = Microcystis) %>% 
+  filter(!is.na(Longitude) | !is.na(Latitude)) %>%
+  rename("mc_rating" = Microcystis) %>%
   mutate(Year= year(Date),
          YearF= as.factor(Year),
          MonthF= factor(Month, levels = c(5, 6,7,8,9, 10, 11, 12),
-                         labels = c("May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))  
+                         labels = c("May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")))
 
 
 ## Add water year types (Sacramento Valley Index)
-HABs2.wyt <- HABs2 %>% 
- # st_drop_geometry() %>% 
-  #select(-colors, -nudge) %>% 
+HABs2.wyt <- HABs2 %>%
+ # st_drop_geometry() %>%
+  #select(-colors, -nudge) %>%
   left_join(., wy_SacIndex)
 
 
@@ -66,12 +66,12 @@ HABs3 <- HABs2.wyt %>%
          mc_mod= factor(mc_mod, ordered= TRUE, levels= c("none", "low", "high")))
 
 ## Calculate maximum and minimum MC rating for each month
-HABs3.MaxMin <-  HABs3 %>% 
-  group_by(Source, Station, Longitude, Latitude, YearF, MonthF, SacIndex, Yr_type, Drought) %>% 
+HABs3.MaxMin <-  HABs3 %>%
+  group_by(Source, Station, Longitude, Latitude, YearF, MonthF, Index, Yr_type, Drought) %>%
   summarize(mc_max= max(mc_mod),
-            mc_min= min(mc_mod)) %>% 
+            mc_min= min(mc_mod)) %>%
   ungroup()
-  
+
 
 ## Spatial join
 HABs3.sf <-  HABs3.MaxMin %>%
@@ -85,26 +85,26 @@ HABs3.regions <-  st_join(HABs3.sf, Newregions) %>%
 #   geom_sf(data= Newregions) +
 #   geom_sf(data= HABs2.sf) =
 #   coord_sf()
-# 
-# 
+#
+#
 # ggplot() +
 #   geom_sf(data= Newregions) +
 #   geom_sf(data= HABs2.regions) +
 #   coord_sf()
 
-  
+
 ## Format for statistical models
-HABs.stats <- HABs3.regions %>% 
-  st_drop_geometry() %>% 
-  select(-colors, -nudge)
+HABs.stats <- HABs3.regions %>%
+  st_drop_geometry() #%>%
+  #select(-colors, -nudge)
 
 
 #### SUMMARY TABLES ####
 unique(HABs.stats$Station)
 table(HABs.stats$Source)
-HABs.stats %>% 
-  select(YearF, Yr_type) %>% 
-  distinct() %>% 
+HABs.stats %>%
+  select(YearF, Yr_type) %>%
+  distinct() %>%
   count(Yr_type)
 
 
@@ -153,21 +153,21 @@ fit_max_mc_SI.region.cumu <- brm(
 
 ## Extract marginal effects
 max_mc1_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region", "MonthF"))
-max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type` %>% 
+max_mc1_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc1_conditions.cumu, categorical= TRUE)$`Yr_type` %>%
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 max_mc2_conditions.cumu <- make_conditions(fit_max_mc_SI.cumu, c("Region"))
-max_mc2_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc2_conditions.cumu, categorical= TRUE)$`Yr_type` %>% 
+max_mc2_effects.cumu <- conditional_effects(fit_max_mc_SI.cumu, "Yr_type", condition= max_mc2_conditions.cumu, categorical= TRUE)$`Yr_type` %>%
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 max_mc1_conditions.region.cumu <- make_conditions(fit_max_mc_SI.region.cumu, c("Region"))
-max_mc1_effects.region.cumu <- conditional_effects(fit_max_mc_SI.region.cumu, "Yr_type", condition= max_mc1_conditions.region.cumu, categorical= TRUE)$`Yr_type` %>% 
+max_mc1_effects.region.cumu <- conditional_effects(fit_max_mc_SI.region.cumu, "Yr_type", condition= max_mc1_conditions.region.cumu, categorical= TRUE)$`Yr_type` %>%
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 
 
 max_mc1_conditions.acat <- make_conditions(fit_max_mc_SI.acat, c("Region", "MonthF"))
-max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", condition= max_mc1_conditions.acat, categorical= TRUE)$`Yr_type` %>% 
+max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", condition= max_mc1_conditions.acat, categorical= TRUE)$`Yr_type` %>%
   mutate(Yr_type= factor(Yr_type, ordered= TRUE, levels= c("Critical", "Dry", "Below Normal", "Wet")))
 
 
@@ -175,29 +175,29 @@ max_mc1_effects2.acat <- conditional_effects(fit_max_mc_SI.acat, "Yr_type", cond
 ggplot(max_mc1_effects.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"),
                     name= "Water Year") +
   labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "cumu") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-  facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE) 
+  facet_rep_grid(Region ~ MonthF, repeat.tick.labels = TRUE)
   ggsave(last_plot(), filename= "MCrating_RegionMonth.png", width= 20, height= 16, dpi= 300,
        path= here::here(mypath, "Figures"))
 
 ggplot(max_mc1_effects.region.cumu, aes(x= cats__, y= estimate__, group= Yr_type)) +
   geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"),
                     name= "Water Year") +
   labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
-  facet_rep_grid(~ Region, repeat.tick.labels = TRUE) 
+  facet_rep_grid(~ Region, repeat.tick.labels = TRUE)
 ggsave(last_plot(), filename= "MCrating_Region.png", width= 10, height= 4, dpi= 300,
        path= here::here(mypath, "Figures"))
 
 ggplot(max_mc1_effects2.acat, aes(x= cats__, y= estimate__, group= Yr_type)) +
     geom_col(aes(fill= Yr_type), color= "black", position= position_dodge()) +
   geom_errorbar(aes(ymin= lower__, ymax= upper__), width= 0.5, position= position_dodge(0.9)) +
-  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"), 
+  scale_fill_manual(values= c("firebrick", "darkorange2", "lightgoldenrod", "lightskyblue"),
                     name= "Water Year") +
     labs(x= expression(paste(italic("Microcystis"), " Rating Level")), y= "Probability", title= "acat") +
   scale_y_continuous(expand= c(0, 0), limits= c(0, 1)) +
@@ -245,19 +245,19 @@ HABssf = filter(HABs, !is.na(Longitude), !is.na(Latitude)) %>%
 
 Habs2 =   st_join(HABssf, regions) %>%
   st_drop_geometry() %>%
-  filter(!is.na(Stratum), !is.na(Microcystis)) %>% 
+  filter(!is.na(Stratum), !is.na(Microcystis)) %>%
   mutate(Year = year(Date), Yearf = as.factor(Year),
          Month2 = factor(Month, levels = c(6,7,8,9,10),
-                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))   
+                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))
 
-Habs2 =   HABs %>% 
+Habs2 =   HABs %>%
   #st_join(HABssf, regions) %>%
   #st_drop_geometry() %>%
-  #filter(!is.na(Stratum), !is.na(Microcystis)) %>% 
-  #filter(!is.na(Microcystis)) %>% 
+  #filter(!is.na(Stratum), !is.na(Microcystis)) %>%
+  #filter(!is.na(Microcystis)) %>%
   mutate(Year = year(Date), Yearf = as.factor(Year),
          Month2 = factor(Month, levels = c(6,7,8,9,10),
-                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))   
+                         labels = c("Jun", "Jul", "Aug", "Sep", "Oct")))
 
 
 
@@ -295,12 +295,12 @@ pairs = emmeans(ord2, pairwise ~ Yearf)
 cont = pairs$contrasts
 plot(emmeans(ord2, pairwise ~ Yearf), comparisons = TRUE)
 tukcfg = cld(emmeans(ord2, pairwise ~ Yearf), Letters = letters) %>%
-  mutate(Year = as.numeric(as.character(Yearf)), 
-         Letter = str_trim(.group)) 
+  mutate(Year = as.numeric(as.character(Yearf)),
+         Letter = str_trim(.group))
 
 tukcfg2 = cld(emmeans(ord2, pairwise ~ Stratum2), Letters = letters) %>%
-  mutate( 
-    Letter = str_trim(.group)) 
+  mutate(
+    Letter = str_trim(.group))
 
 #this is table 2-11
 Tuekyresults = bind_rows(tukcfg, tukcfg2)
@@ -312,11 +312,11 @@ confint(pr)
 plot(pr)
 pairs(pr)
 
-#This is figure 2-27 
+#This is figure 2-27
 #Plot across the whole Delta, just summer/fall
 ggplot(HABs3, aes(x = Year, fill = as.factor(Microcystis))) +
-  geom_bar(position = "fill", color = "grey")+ 
-  scale_fill_manual(values = c("white", "tan2", "yellow", "red", "darkred"), 
+  geom_bar(position = "fill", color = "grey")+
+  scale_fill_manual(values = c("white", "tan2", "yellow", "red", "darkred"),
                     labels = c("absent", "low", "medium", "high", "very high"),
                     name = "Microcystis")+ ylab("Relative Frequency") +
   geom_text(data = tukcfg, aes(x = Year, y = 0.7, label = Letter), inherit.aes = F)
@@ -327,8 +327,8 @@ ggplot(HABs3, aes(x = Year, fill = as.factor(Microcystis))) +
 #Plot for paper with just three categories
 #
 ggplot(Habs2, aes(x = Year, fill = HABord)) +
-  geom_bar(position = "fill", color = "grey")+ 
-  scale_fill_manual(values = c("white", "orange", "red"), 
+  geom_bar(position = "fill", color = "grey")+
+  scale_fill_manual(values = c("white", "orange", "red"),
                     labels = c("absent", "low", "high"),
                     name = "Microcystis")+ ylab("Relative Frequency") +
   geom_text(data = tukcfg, aes(x = Year, y = 0.7, label = Letter), inherit.aes = F)
@@ -357,7 +357,7 @@ HabMod = nest_by(Habs2, Stratum2) %>%
 
 #pairwise comparisons
 RegTuk = summarize(HabMod, broom::tidy(CLD))%>%
-  mutate(Year = as.numeric(as.character(Yearf)), 
+  mutate(Year = as.numeric(as.character(Yearf)),
          Letter = str_trim(.group)) %>%
   rename(emmean = estimate, std.erroremm = std.error)
 
@@ -382,7 +382,7 @@ regMod2 = left_join(regMod, RegTuk) %>%
 #This is plot 2-28
 ggplot(Habs2, aes(x = Year, fill = as.factor(Microcystis))) +
   geom_bar(position = "fill", color = "grey")+ facet_wrap(~Stratum2, nrow = 4)+
-  scale_fill_manual(values = c("white", "tan2", "yellow", "red", "darkred"), 
+  scale_fill_manual(values = c("white", "tan2", "yellow", "red", "darkred"),
                     labels = c("absent", "low", "medium", "high", "very high"),
                     name = "Microcystis")+ ylab("Relative Frequency") +
   geom_text(data = RegTuk, aes(x = Year, y = 0.9, label = Letter), size = 4, inherit.aes = FALSE)+
@@ -393,7 +393,7 @@ ggplot(Habs2, aes(x = Year, fill = as.factor(Microcystis))) +
 #now with just three categories
 ggplot(Habs2, aes(x = Year, fill = HABord)) +
   geom_bar(position = "fill", color = "grey")+ facet_wrap(~Stratum2, nrow = 4)+
-  scale_fill_manual(values = c("white", "orange",  "red"), 
+  scale_fill_manual(values = c("white", "orange",  "red"),
                     labels = c("absent", "low", "high"),
                     name = "Microcystis")+ ylab("Relative Frequency") +
   geom_text(data = RegTuk, aes(x = Year, y = 0.9, label = Letter), size = 4, inherit.aes = FALSE)+

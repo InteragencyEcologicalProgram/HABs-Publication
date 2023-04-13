@@ -2,6 +2,7 @@
 library(DroughtData)
 library(sf)
 library(tidyverse)
+library(lubridate)
 load("NewHABregions.RData")
 
 
@@ -16,13 +17,13 @@ nut2 = st_join(nut, Newregions) %>%
   drt_replace_rl(data_var = DissOrthophos, sign_var = DissOrthophos_Sign) %>%
   drt_replace_rl(data_var = DissAmmonia, sign_var = DissAmmonia_Sign)
 
-nut3 = pivot_longer(nut2, cols = c(DissNitrateNitrite, DissOrthophos, DissAmmonia), 
+nut3 = pivot_longer(nut2, cols = c(DissNitrateNitrite, DissOrthophos, DissAmmonia),
                     values_to = "Value", names_to = "Analyte")
 
 nutsum = group_by(nut3, Month, Analyte, Region) %>%
   summarize(ValueM = mean(Value, na.rm = T), sd = sd(Value, na.rm = T), se = sd(Value, na.rm =T)/sqrt(n()),
             lower = quantile(Value, .25,  na.rm = T), upper = quantile(Value, .75, na.rm = T)) %>%
-  mutate(Analyte2 =case_when(Analyte == "DissAmmonia" ~ "Ammonia",
+  mutate(Analyte2 =case_when(Analyte == "DissAmmonia" ~ "Ammonium",
                              Analyte == "DissNitrateNitrite" ~ "Nitrate + Nitrite",
                              Analyte == "DissOrthophos" ~ "Orthophosphate"))
 
