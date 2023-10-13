@@ -4,6 +4,7 @@ library(sf)
 library(tidyverse)
 library(lubridate)
 load("NewHABregions.RData")
+st_write(Newregions, dsn = "outputs/HABRegions.shp")
 
 
 nut = raw_nutr_2013_2021 %>%
@@ -25,7 +26,9 @@ nutsum = group_by(nut3, Month, Analyte, Region) %>%
             lower = quantile(Value, .25,  na.rm = T), upper = quantile(Value, .75, na.rm = T)) %>%
   mutate(Analyte2 =case_when(Analyte == "DissAmmonia" ~ "Ammonium",
                              Analyte == "DissNitrateNitrite" ~ "Nitrate + Nitrite",
-                             Analyte == "DissOrthophos" ~ "Orthophosphate"))
+                             Analyte == "DissOrthophos" ~ "Orthophosphate"),
+         Region = case_when(Region == "OMR/Franks" ~ "Franks/OMR",
+                            TRUE ~ Region))
 
 ggplot(nutsum, aes(x = Month, y = ValueM, fill = Region)) + geom_col()+
   geom_errorbar(aes(ymin = lower, ymax = upper))+
