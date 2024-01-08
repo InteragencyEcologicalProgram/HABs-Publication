@@ -170,15 +170,18 @@ HABs3 = left_join(HABs3, yeartypes) %>%
 
 pal_yrtype <- c( "C" = "darkorange", "D" = "#53CC67", "BN" = "#009B95", "W" = "#481F70FF")
 
+legendtitle = expression(atop(italic("Microcystis"), "Rating"))
+
 ggplot(HABs3, aes(x = Year, fill = HABord)) +
   geom_bar(position = "fill", color = "grey")+
   scale_fill_manual(values = c("beige", "orange", "red"),
                     labels = c("absent", "low", "high"),
-                    name = "Microcystis")+ ylab("Relative Frequency") +
+                    name = legendtitle)+ ylab("Relative Frequency") +
   geom_text(aes(x = Year, y = 1.03, label = Yr_type2, color = Yr_type2))+
   scale_color_manual(values = pal_yrtype, guide = NULL)+
+  scale_x_continuous(breaks = c(2008, 2010, 2012, 2014, 2016, 2018, 2020))+
   annotate("text", x = 2014, y = 1.07, label = "Water Year Type")+
-  theme_bw()
+  theme_bw()+theme(legend.title = element_text(hjust =0))
 ggsave("plots/YearHAB_3cat.tiff", device = "tiff", width = 6, height = 5)
 
 

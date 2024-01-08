@@ -64,7 +64,7 @@ newdata = mutate(temp, Temperature = Tempscale*foo$Estimate[2] + foo$Estimate[1]
 
 xlab <- "Temperature (°C)"
 
-ggplot(filter(newdata), aes(x = Temperature, y = estimate__)) +
+ptemp = ggplot(filter(newdata), aes(x = Temperature, y = estimate__)) +
   geom_ribbon(aes(ymin = lower__, ymax = upper__, fill = cats__), alpha = 0.3)+
   geom_line(aes(color = cats__))+
   scale_fill_manual(values = c("blue", "orange", "red"),
@@ -80,24 +80,26 @@ ggplot(filter(newdata), aes(x = Temperature, y = estimate__)) +
   ylab("Probability")+
   geom_vline(xintercept = mean(filter(SoDeltasum, Yearf == '2021', Month2 == "Jul")$Temperature),
              linetype = 2)+
-  annotate("text", x = 23.4, y = 0.5, angle = 90, label = "Mean Jul 2021")+
-  theme_bw()+
-  theme(legend.title = element_text(face = "italic"))
+  annotate("text", x = 23.8, y = 0.5, angle = 90, label = "Mean Jul 2021")+
+  annotate("text", x = 20.8, y = 0.9, label = "A", size = 15)+
 
-ggsave("plots/MicTemp_aug.tiff", device = "tiff", width = 6, height = 4, units = "in")
+  theme_bw()+
+  theme(legend.title = element_text(face = "italic"), legend.position = "top")
+
+#ggsave("plots/MicTemp_aug.tiff", device = "tiff", width = 6, height = 4, units = "in")
 
 
 
 ex = cex5.61$`Exscale:cats__`
-lmE = lm(Export ~Exscale, data = SoDelta)
+lmE = lm(EXPORTS ~Exscale, data = SoDelta)
 fooE = as.data.frame(summary(lmE)$coefficients)
-newdataE = mutate(ex, Exports = Exscale*fooE$Estimate[2] + fooE$Estimate[1], ExportsCMS = Exports*0.0283168)
+newdataE = mutate(ex, Exports = Exscale*fooE$Estimate[2] + fooE$Estimate[1])
 
 xlabCMS = expression(paste(
   "Project Exports (",
   m^3, "/sec)", sep=""))
 
-ggplot(filter(newdataE), aes(x = ExportsCMS, y = estimate__)) +
+pex = ggplot(filter(newdataE), aes(x = Exports, y = estimate__)) +
   geom_ribbon(aes(ymin = lower__, ymax = upper__, fill = cats__), alpha = 0.3)+
   geom_line(aes(color = cats__))+
   scale_fill_manual(values = c("blue", "orange", "red"),
@@ -110,11 +112,14 @@ ggplot(filter(newdataE), aes(x = ExportsCMS, y = estimate__)) +
   #                   labels = c("Low", "High"), name = "Microcystis")+
   xlab(xlabCMS)+
   ylab("Probability")+
+
+  coord_cartesian(ylim = c(0,1))+
   geom_vline(xintercept = 36.8, linetype = 2)+
+  annotate("text", x = 50, y = 0.9, label = "B", size = 15)+
   annotate("text", x = 30, y = 0.4, label = "TUCP Export Limit", angle = 90)+
   theme_bw()+
-  theme(legend.title = element_text(face = "italic"))
-ggsave("plots/MicExports_augCMS.tiff", device = "tiff", width = 6, height = 4, units = "in")
+  theme(legend.title = element_text(face = "italic"), legend.position = "none")
+#ggsave("plots/MicExports_augCMS.tiff", device = "tiff", width = 6, height = 4, units = "in")
 
 
 turb = cex5.61$`Secchs:cats__`
@@ -123,7 +128,7 @@ fooS = as.data.frame(summary(lmS)$coefficients)
 newdataS = mutate(turb, Secchi = Secchs*fooS$Estimate[2] + fooS$Estimate[1])
 
 
-ggplot(filter(newdataS), aes(x = Secchi, y = estimate__)) +
+pturb = ggplot(filter(newdataS), aes(x = Secchi, y = estimate__)) +
   geom_ribbon(aes(ymin = lower__, ymax = upper__, fill = cats__), alpha = 0.3)+
   geom_line(aes(color = cats__))+
   scale_fill_manual(values = c("blue", "orange", "red"),
@@ -136,15 +141,21 @@ ggplot(filter(newdataS), aes(x = Secchi, y = estimate__)) +
   #                    labels = c("Low", "High"), name = "Microcystis")+
   xlab("Secchi Depth (cm)")+
   ylab("Probability")+
+  coord_cartesian(ylim = c(0,1))+
   geom_vline(xintercept = mean(filter(SoDeltasum, Yearf == '2021', Month2 == "Jul")$Secchi),
              linetype = 2)+
-  annotate("text", x = 100, y = 0.5, angle = 90, label = "Mean Jul 2021")+
+  annotate("text", x = 95, y = 0.5, angle = 90, label = "Mean Jul 2021")+
+  annotate("text", x = 40, y = 0.9, label = "C", size = 15)+
 
   theme_bw()+
-  theme(legend.title = element_text(face = "italic"))
-ggsave("plots/MicSecchi_aug.tiff", device = "tiff", width = 6, height = 4, units = "in")
+  theme(legend.title = element_text(face = "italic"), legend.position = "none")
+#ggsave("plots/MicSecchi_aug.tiff", device = "tiff", width = 6, height = 4, units = "in")
 
 
+library(gridExtra)
+plots = grid.arrange(grobs = list(ptemp, pex, pturb), nrow = 3, heights = c(1.1, 1, 1))
+ggsave("plots/CombinedMicPredictions.tiff", plot = plots, device = "tiff", width = 6, height = 12, units = "in")
+#########################################################################################
 #now let's see how changing exports and stuff will change microcystis
 
 

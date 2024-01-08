@@ -7,6 +7,7 @@ library(lubridate)
 library(sfheaders)
 library(ggsn)
 library(readxl)
+library(ggspatial)
 
 
 mypal = Newregions$colors
@@ -14,7 +15,7 @@ load("NewHABregions.RData")
 
 # Map of regions for pwper ####################
 # This may need tweaking in illustrator
-ggplot() + geom_sf(data = Newregions, aes(fill = Region), alpha = 0.7)+ 
+ggplot() + geom_sf(data = Newregions, aes(fill = Region), alpha = 0.7)+
   geom_sf(data = WW_Delta, fill = "lightblue")+ # + geom_sf(data = HABssf1)+
   scale_fill_manual(values = Newregions$colors, guide = NULL)+
   geom_sf_label(data = Newregions,aes(label = Region))+
@@ -31,7 +32,7 @@ barrier = data.frame(Latitude = 38.0576168, Longitude = -121.6712761, label = "S
 library(ggmap)
 basemap = get_stamenmap(bbox = c(-121, 38, -122, 39), messaging = TRUE, maptype = "toner")
 ggmap(basemap)
-ggplot() + geom_sf(data = Newregions, aes(fill = Region), alpha = 0.4)+ 
+ggplot() + geom_sf(data = Newregions, aes(fill = Region), alpha = 0.4)+
   geom_sf(data = WW_Delta, fill = "lightblue")+ # + geom_sf(data = HABssf1)+
   scale_fill_manual(values = Newregions$colors, guide = NULL)+
   annotate("point", x = -121.6712761, y = 38.0576168, size = 5, shape = 17)+
@@ -51,7 +52,7 @@ ggplot() + geom_sf(data = WW_Delta, fill = "lightgrey")+
   geom_sf(data = filter(HABssf, Source != "DOP", !Station %in% c("EZ2", "EZ6", "EZ2-SJR", "EZ6-SJR")), aes(shape = Source)) +
   scale_shape_discrete(name = "Visual Index Sites")+
   scale_color_manual(values = c("red", "blue"), name = NULL)+
-  
+
   coord_sf(xlim = c(-121.9, -121.2), ylim = c(37.7, 38.6))+
   geom_sf_label(data = Newregions, aes(label = Region),
                 label.size = 0.05,
@@ -93,10 +94,10 @@ ggplot() + geom_sf(data = WW_Delta, fill = "lightgrey")+
   #               label.size = 0.05,
   #               label.padding = unit(0.1, "lines"),
   #               nudge_y = Newregions$nudge, alpha = 0.8, fontface = "bold")+
-  # 
+  #
   scalebar(dist = 10, dist_unit = "km",
            transform = TRUE, st.dist = .05, x.min = -121.6, x.max = -121.8, y.min = 37.7, y.max = 37.9, height = 0.05) +
-  
+
   north(data = Newregions, symbol = 2) +
   theme_bw()+ylab("")+xlab("")
 
