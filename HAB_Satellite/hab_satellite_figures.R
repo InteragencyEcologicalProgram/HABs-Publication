@@ -62,8 +62,9 @@ ci_cat_levels <-
 
 # Prepare HAB satellite data for stacked area plot
 df_hab_sat_area_plt <- hab_sat_ow_delta %>%
-  # Restrict data to Jun-Oct, Franks Tract and Mildred Island regions
+  # Restrict data to Jun-Oct in 2020-2021, Franks Tract and Mildred Island regions
   filter(
+    year(Date) %in% c("2020", "2021"),
     month(Date) >= 6 & month(Date) <= 10,
     Region %in% c("Franks Tract", "Mildred Island")
   ) %>%
@@ -82,7 +83,7 @@ df_hab_sat_area_plt <- hab_sat_ow_delta %>%
   ungroup() %>%
   select(!starts_with("na_val")) %>%
   # Restructure data to long format
-  select(-c(AvgCI, InvalidOrMissing)) %>%
+  select(-InvalidOrMissing) %>%
   pivot_longer(
     cols = where(is.integer),
     names_to = "CIcategory",
@@ -117,11 +118,11 @@ area_plt_hab_sat <- df_hab_sat_area_plt %>%
     expand = expansion(mult = 0.03)
   ) +
   scale_y_continuous(
-    name = "Percent of valid pixels within each Cyano Index Category",
+    name = "Percent of valid pixels within each CIcyano Category",
     labels = percent_format()
   ) +
   scale_fill_manual(
-    name = "Cyano Index\nCategory",
+    name = "CIcyano Category",
     values = ci_cat_color_pal
   ) +
   theme_bw() +
@@ -200,7 +201,7 @@ sf_franks_mildred <-
   filter(HNAME %in% c("Franks Tract", "Mildred Island"))
 
 # Transform crs of Franks-Mildred and WW_Delta shapefiles to the crs of the HAB satellite data
-crs_hab_sat <- st_crs(ndf_hab_sat$strs_prx_obj[[1]])
+crs_hab_sat <- st_crs(ndf_hab_sat_map$strs_prx_obj[[1]])
 sf_franks_mildred_32611 <- st_transform(sf_franks_mildred, crs = crs_hab_sat)
 WW_Delta_32611 <- st_transform(WW_Delta, crs = crs_hab_sat)
 
@@ -243,7 +244,7 @@ create_hab_map <- function(strs_obj, map_title, x_txt_lab, y_txt_lab) {
   p <- ggplot() +
     geom_stars(data = strs_obj, na.rm = TRUE) +
     scale_fill_manual(
-      name = "Cyano Index\nCategory",
+      name = "CIcyano Category",
       drop = FALSE,
       na.translate = FALSE,
       values = ci_cat_color_pal
