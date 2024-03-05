@@ -118,11 +118,11 @@ area_plt_hab_sat <- df_hab_sat_area_plt %>%
     expand = expansion(mult = 0.03)
   ) +
   scale_y_continuous(
-    name = "Percent of valid pixels within each CIcyano Category",
+    name = expression(Percent~of~valid~pixels~within~each~CI[cyano]~Category),
     labels = percent_format()
   ) +
   scale_fill_manual(
-    name = "CIcyano Category",
+    name = expression(CI[cyano]~Category),
     values = ci_cat_color_pal
   ) +
   theme_bw() +
@@ -244,7 +244,7 @@ create_hab_map <- function(strs_obj, map_title, x_txt_lab, y_txt_lab) {
   p <- ggplot() +
     geom_stars(data = strs_obj, na.rm = TRUE) +
     scale_fill_manual(
-      name = "CIcyano Category",
+      name = expression(CI[cyano]~Category),
       drop = FALSE,
       na.translate = FALSE,
       values = ci_cat_color_pal
