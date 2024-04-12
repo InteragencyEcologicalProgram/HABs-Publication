@@ -1,38 +1,55 @@
-## Graph WQ Values at Franks Tract (FRK) 
+## Graph WQ Values at Franks Tract (FRK)
 ## Summer 2021
 
-library("tidyverse");packageVersion("tidyverse")
-library("lubridate");packageVersion("lubridate")
-library("timetk");packageVersion("timetk")
-library("cder");packageVersion("cder")
-library("rMR");packageVersion("rMR")
+library(tidyverse)
+library(lubridate)
+library(timetk)
+library(cder)
+library(rMR)
+library(here)
 
-setwd("C:/R/work-projects/HABs.Weeds")
-theme_set(theme_bw())
+# Import data ------------------------------------------------------------------
 
-rm(list=ls()) #cleans workspace
+# Import QA'd C-EMP WQ data from Andrew Tran
+DO <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_DissolvedOxygen.csv"),
+               col_select = c(-...1, -station))
 
-## Create date variables
-#start <- as.Date("2015-06-19")
-#end <- Sys.Date()
+pH <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_pH.csv"),
+               col_select = c(-...1, -station))
 
-## Import QA'd data from Andrew Tran
-DO <- read_csv("EMP/FRK_data/FRK_DissolvedOxygen.csv", col_select = c(-...1, -station))
-pH <- read_csv("EMP/FRK_data/FRK_pH.csv", col_select = c(-...1, -station))
-Temp <- read_csv("EMP/FRK_data/FRK_WaterTemperature.csv", col_select = c(-...1, -station))
-SpC <- read_csv("EMP/FRK_data/FRK_SpC.csv", col_select = c(-...1, -station))
-Turb <- read_csv("EMP/FRK_data/FRK_Turbidity.csv", col_select = c(-...1, -station))
-Chl <- read_csv("EMP/FRK_data/FRK_Fluorescence.csv", col_select = c(-...1, -station))
+Temp <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_WaterTemperature.csv"),
+                 col_select = c(-...1, -station))
+
+SpC <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_SpC.csv"),
+                col_select = c(-...1, -station))
+
+Turb <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_Turbidity.csv"),
+                 col_select = c(-...1, -station))
+
+Chl <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_Fluorescence.csv"),
+                col_select = c(-...1, -station))
 
 ## Import QA'd 2021 data from A. Tran
-DO.2021 <- read_csv("EMP/2021/FRK_DissolvedOxygen.csv", col_select = c(-...1, -station))
-pH.2021 <- read_csv("EMP/2021/FRK_pH.csv", col_select = c(-...1, -station))
-Temp.2021 <- read_csv("EMP/2021/FRK_WaterTemperature.csv", col_select = c(-...1, -station))
-SpC.2021 <- read_csv("EMP/2021/FRK_SpC.csv", col_select = c(-...1, -station))
-Turb.2021 <- read_csv("EMP/2021/FRK_Turbidity.csv", col_select = c(-...1, -station))
-Chl.2021 <- read_csv("EMP/2021/FRK_Fluorescence.csv", col_select = c(-...1, -station))
+DO.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_DissolvedOxygen.csv"),
+                    col_select = c(-...1, -station))
 
-## Combine datasets for each analyte
+pH.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_pH.csv"),
+                    col_select = c(-...1, -station))
+
+Temp.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_WaterTemperature.csv"),
+                      col_select = c(-...1, -station))
+
+SpC.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_SpC.csv"),
+                     col_select = c(-...1, -station))
+
+Turb.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_Turbidity.csv"),
+                      col_select = c(-...1, -station))
+
+Chl.2021 <- read_csv(here("WQ-cont-TMF","EMP","2021","FRK_Fluorescence.csv"),
+                     col_select = c(-...1, -station))
+
+
+# Combine datasets for each analyte
 DO <- dplyr::bind_rows(DO, DO.2021)
 pH <- dplyr::bind_rows(pH, pH.2021)
 Temp <- dplyr::bind_rows(Temp, Temp.2021)
@@ -40,7 +57,7 @@ SpC <- dplyr::bind_rows(SpC, SpC.2021)
 Turb <- dplyr::bind_rows(Turb, Turb.2021)
 Chl <- dplyr::bind_rows(Chl, Chl.2021)
 
-## Remove duplicates
+# Remove duplicates
 DO <- DO %>% distinct()
 pH <- pH %>% distinct()
 Temp <- Temp %>% distinct()
@@ -48,8 +65,9 @@ SpC <- SpC %>% distinct()
 Turb <- Turb %>% distinct()
 Chl <- Chl %>% distinct()
 
-## Import list of dates only
-dates <- read_csv("EMP/FRK_data/FRK_DissolvedOxygen.csv", col_select = 4) 
+# Import list of dates only
+dates <- read_csv(here("WQ-cont-TMF","EMP","FRK_data","FRK_DissolvedOxygen.csv"),
+                  col_select = 4)
 
 ## Remove X-flagged data
 DO <- DO %>% filter(DO$qaqc_flag_id != "X")
@@ -59,19 +77,19 @@ SpC <- SpC %>% filter(SpC$qaqc_flag_id != "X")
 Turb <- Turb %>% filter(Turb$qaqc_flag_id != "X")
 Chl <- Chl %>% filter(Chl$qaqc_flag_id != "X")
 
-## Combined all data into one 
+## Combined all data into one
 WQ <- left_join(dates, DO[2:3]) %>%
   rename("DO.conc" = "value")
 
 WQ <- left_join(WQ, pH[2:3]) %>%
   rename("pH" = "value")
-  
+
 WQ <- left_join(WQ, Temp[2:3]) %>%
   rename("Temp" = "value")
 
 WQ <- left_join(WQ, SpC[2:3]) %>%
   rename("SpCond" = "value")
-  
+
 WQ <- left_join(WQ, Turb[2:3]) %>%
   rename("Turb" = "value")
 
@@ -85,10 +103,10 @@ WQ <- WQ %>% rename ("DateTime" = "time")
 
 
 ## Calculate DO Saturation using USGS Method
-DO.sat <- DO.saturation(WQ$DO.conc, 
-                        elevation.m = 0, 
-                        temp.C = WQ$Temp, 
-                        salinity = WQ$SpCond, 
+DO.sat <- DO.saturation(WQ$DO.conc,
+                        elevation.m = 0,
+                        temp.C = WQ$Temp,
+                        salinity = WQ$SpCond,
                         salinity.units = "uS")
 DO.sat <- as_tibble(DO.sat)
 
@@ -152,35 +170,35 @@ params <- unique(WQ.mean$Parameter)
 for (param in params) {
   df_temp <- WQ.mean %>%
     filter(Parameter == param)
-  
+
   plot.min.max <- ggplot(WQ.mean) +
-    geom_point(data = subset(WQ.mean, Parameter == param), 
-               aes(x = Julian, y = Daily.Mean, color = as.factor(Year)), 
+    geom_point(data = subset(WQ.mean, Parameter == param),
+               aes(x = Julian, y = Daily.Mean, color = as.factor(Year)),
                size = 1) +
-    scale_x_continuous(breaks = c(1,60,121,182,244,305, 366), 
+    scale_x_continuous(breaks = c(1,60,121,182,244,305, 366),
                        labels = c("Jan","Mar","May","Jul","Sep","Nov","Jan")) +
     labs(x = NULL,
          y = paste0(param),
          fill = "Year",
          title = paste0("Daily Mean ",param,", 2015-2021"))
-  
+
   plot.min.max +
-    theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+    theme(panel.background = element_rect(fill = "white", linetype = 0)) +
     theme(panel.grid.minor = element_blank()) +
     scale_color_brewer(palette = "Set2", name = "Year") +
     facet_wrap(Year ~ ., ncol = 1, dir = "h")
-  
+
   ggsave(path="plots",
-         filename = paste0("WQ.FRK.",param,".all.pdf"), 
+         filename = paste0("WQ.FRK.",param,".all.pdf"),
          device = "pdf",
-         scale=1.0, 
+         scale=1.0,
          units="in",
          height=9,
-         width=6.5, 
+         width=6.5,
          dpi="print")
-  
+
   rm(df_temp)
-  
+
 }
 
 
@@ -189,7 +207,7 @@ for (param in params) {
 #########################################
 WQ.min.max <- WQ.long %>%
   group_by(Date, Parameter) %>%
-  summarise(Daily.Min = min(value, na.rm = TRUE), 
+  summarise(Daily.Min = min(value, na.rm = TRUE),
             Daily.Max = max(value, na.rm = TRUE)) %>%
   ungroup
 
@@ -214,56 +232,58 @@ WQ.min.max$month2 <- NULL
 
 ## Subset 2020 and 2021 only
 WQ.min.max.20s <- WQ.min.max %>%
-  filter(Year >= "2020") 
+  filter(Year >= "2020")
 
 WQ.min.max.20s.Summer <- WQ.min.max.20s %>%
   filter(Julian >= 121) %>%
   filter(Julian <= 304)
 
 ## Plot Daily Min and Max in Summer 2020 and 2021
+theme_set(theme_bw())
+
 params <- unique(WQ.min.max.20s.Summer$Parameter)
 
 for (param in params) {
   df_temp <- WQ.min.max.20s.Summer %>%
     filter(Parameter == param)
-  
+
   plot.min.max <- ggplot(WQ.min.max.20s.Summer) +
-    geom_point(data = subset(WQ.min.max.20s.Summer, Parameter == param), 
-              aes(x = Julian, y = Daily.Max), 
-              size = 1, 
+    geom_point(data = subset(WQ.min.max.20s.Summer, Parameter == param),
+              aes(x = Julian, y = Daily.Max),
+              size = 1,
               color = "blue") +
-    geom_point(data = subset(WQ.min.max.20s.Summer, Parameter == param), 
-              aes(x = Julian, y = Daily.Min), 
-              size = 1, 
+    geom_point(data = subset(WQ.min.max.20s.Summer, Parameter == param),
+              aes(x = Julian, y = Daily.Min),
+              size = 1,
               color = "red") +
-    scale_x_continuous(breaks = c(121,152,182,213,244,274,305), 
+    scale_x_continuous(breaks = c(121,152,182,213,244,274,305),
                        labels = c("May","Jun","Jul","Aug","Sep","Oct","Nov")) +
     labs(x = NULL,
          y = paste0(param),
          title = paste0("Daily Minimum and Maximum ",param,", May - October"))
-  
+
   plot.min.max +
-    theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+    theme(panel.background = element_rect(fill = "white", linetype = 0)) +
     theme(panel.grid.minor = element_blank()) +
     facet_wrap(Year ~ ., ncol = 1, dir = "h")
-  
+
   ggsave(path="plots",
-         filename = paste0("WQ.FRK.",param,".Summer.20s.pdf"), 
+         filename = paste0("WQ.FRK.",param,".Summer.20s.pdf"),
          device = "pdf",
-         scale=1.0, 
+         scale=1.0,
          units="in",
          height=5,
-         width=7, 
+         width=7,
          dpi="print")
-  
+
   rm(df_temp)
-  
+
 }
-  
+
 ## Make Table of Min Max Values by Month
 WQ.mon.min.max <- WQ.min.max %>%
   group_by(Year, Month, Parameter) %>%
-  summarise(Monthly.Min.Mean = mean(Daily.Min, na.rm = T), 
+  summarise(Monthly.Min.Mean = mean(Daily.Min, na.rm = T),
             Monthly.Max.Mean = mean(Daily.Max, na.rm = T),
             Monthly.Min.SD = sd(Daily.Min, na.rm = T),
             Monthly.Max.SD = sd(Daily.Max, na.rm = T)) %>%
@@ -271,29 +291,29 @@ WQ.mon.min.max <- WQ.min.max %>%
 
 write_csv(WQ.mon.min.max, file = "WQ.mon.min.max.csv")
 
-## Plot Monthly mean max and min Values 
+## Plot Monthly mean max and min Values
 plot.mon.min.max <- ggplot(WQ.mon.min.max) +
-  theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+  theme(panel.background = element_rect(fill = "white", linetype = 0)) +
   theme(panel.grid.minor = element_blank()) +
-  geom_point(data = subset(WQ.mon.min.max, Parameter == "pH"), 
-             aes(x = Month, y = Monthly.Max.Mean), 
-             size = 2, 
+  geom_point(data = subset(WQ.mon.min.max, Parameter == "pH"),
+             aes(x = Month, y = Monthly.Max.Mean),
+             size = 2,
              color = "blue") +
-  geom_point(data = subset(WQ.mon.min.max, Parameter == "pH"), 
-             aes(x = Month, y = Monthly.Min.Mean), 
-             size = 2, 
+  geom_point(data = subset(WQ.mon.min.max, Parameter == "pH"),
+             aes(x = Month, y = Monthly.Min.Mean),
+             size = 2,
              color = "red") +
-  scale_x_discrete(breaks = c("Jan","Mar","May","Jul","Sep","Nov"))  
+  scale_x_discrete(breaks = c("Jan","Mar","May","Jul","Sep","Nov"))
                     #                   labels = c("Jan","Mar","May","Jul","Sep","Nov")) +
-  
-  # geom_errorbar(data = subset(WQ.mon.min.max, Parameter == "pH"), 
-  #               aes(x = Month, 
-  #                   ymin = Monthly.Max.Mean-Monthly.Max.SD, 
+
+  # geom_errorbar(data = subset(WQ.mon.min.max, Parameter == "pH"),
+  #               aes(x = Month,
+  #                   ymin = Monthly.Max.Mean-Monthly.Max.SD,
   #                   ymax=Monthly.Max.Mean+Monthly.Max.SD)) +
-  # geom_errorbar(data = subset(WQ.mon.min.max, Parameter == "pH"), 
-  #               aes(x = Month, 
-  #                   ymin = Monthly.Min.Mean-Monthly.Min.SD, 
-  #                   ymax=Monthly.Min.Mean+Monthly.Min.SD)) 
+  # geom_errorbar(data = subset(WQ.mon.min.max, Parameter == "pH"),
+  #               aes(x = Month,
+  #                   ymin = Monthly.Min.Mean-Monthly.Min.SD,
+  #                   ymax=Monthly.Min.Mean+Monthly.Min.SD))
 
 plot.mon.min.max +
   facet_wrap(Year ~ ., ncol = 4, dir = "h") +
@@ -301,12 +321,12 @@ plot.mon.min.max +
        y = "pH")
 
 ggsave(path="plots",
-       filename = "WQ.FRK.pH.png", 
+       filename = "WQ.FRK.pH.png",
        device = "png",
-       scale=1.0, 
+       scale=1.0,
        units="in",
        height=5,
-       width=8, 
+       width=8,
        dpi="print")
 
 
@@ -318,7 +338,7 @@ pH.table <- table %>%
 
 
 
-## Calculate daily mean 
+## Calculate daily mean
 
 ## Flip to long
 WQ.long <- pivot_longer(WQ, names_to = "Parameter", cols = 2:8)
@@ -327,7 +347,7 @@ WQ.2020s.Summer.long <- pivot_longer(WQ.2020s.Summer, names_to = "Parameter", co
 
 ## Plot parameters from 2020s
 WQ.2020s.plot <- ggplot(WQ.2020s.Summer.long) +
-  theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+  theme(panel.background = element_rect(fill = "white", linetype = 0)) +
   theme(panel.grid.minor = element_blank()) +
   #geom_errorbar(aes(ymin=Mean-SD, ymax=Mean+SD), width=1,  position=position_dodge(.9)) +
   #geom_point(data = subset(FRK.pH.mean, Year == "2021"), size = 1) +
@@ -338,25 +358,25 @@ WQ.2020s.plot <- ggplot(WQ.2020s.Summer.long) +
   #scale_color_manual(name = "Basin Plan Criteria", guide = "legend", values = c("darkgreen","yellow3","red")) +
   #geom_hline(aes(yintercept=6.5, linetype="6.5 mg/L"), color = "orange") +
   #geom_hline(aes(yintercept=6.0, linetype="6.0 mg/L"), color = "orange") +
-  #scale_linetype_manual(name = "Limits", values = c(1,2), 
+  #scale_linetype_manual(name = "Limits", values = c(1,2),
   #                      guide = guide_legend(override.aes = list(linetype = c(1,2),
   #                                                               color = c("orange","orange")))) +
   #scale_x_date(date_breaks = "2 day") +
   #geom_smooth(method="loess", span=0.3, size = 2) +
   labs(x = "Date",
-       y = "DO (mg/L)", 
-       title = "Water Quality Franks Tract") 
+       y = "DO (mg/L)",
+       title = "Water Quality Franks Tract")
 
 WQ.2020s.plot +
   facet_wrap(Year ~ ., ncol = 1, dir = "h")
 
 ggsave(path="plots",
-       filename = "WQ.FRK.2021.png", 
+       filename = "WQ.FRK.2021.png",
        device = "png",
-       scale=1.0, 
+       scale=1.0,
        units="in",
        height=11,
-       width=8.5, 
+       width=8.5,
        dpi="print")
 
 ## Create plots for all years for each factor
@@ -380,7 +400,7 @@ FRK.DO.mean <- FRK.DO.mean %>%
 
 
 daily.mean.DO.plot <- ggplot(FRK.DO.mean, aes(x = Julian, y = mean_DO, color = Year)) +
-  theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+  theme(panel.background = element_rect(fill = "white", linetype = 0)) +
   theme(panel.grid.minor = element_blank()) +
   #geom_errorbar(aes(ymin=Mean-SD, ymax=Mean+SD), width=1,  position=position_dodge(.9)) +
   #geom_point(data = subset(FRK.pH.mean, Year == "2021"), size = 1) +
@@ -391,25 +411,25 @@ daily.mean.DO.plot <- ggplot(FRK.DO.mean, aes(x = Julian, y = mean_DO, color = Y
   #scale_color_manual(name = "Basin Plan Criteria", guide = "legend", values = c("darkgreen","yellow3","red")) +
   #geom_hline(aes(yintercept=6.5, linetype="6.5 mg/L"), color = "orange") +
   #geom_hline(aes(yintercept=6.0, linetype="6.0 mg/L"), color = "orange") +
-  #scale_linetype_manual(name = "Limits", values = c(1,2), 
+  #scale_linetype_manual(name = "Limits", values = c(1,2),
   #                      guide = guide_legend(override.aes = list(linetype = c(1,2),
   #                                                               color = c("orange","orange")))) +
   #scale_x_date(date_breaks = "2 day") +
   #geom_smooth(method="loess", span=0.3, size = 2) +
   labs(x = "Date",
-       y = "pH", 
-       title = "Daily Mean DO at Franks Tract") 
+       y = "pH",
+       title = "Daily Mean DO at Franks Tract")
 
 daily.mean.DO.plot +
   facet_wrap(Year ~ ., ncol = 2, dir = "h")
 
 ggsave(path="plots",
-       filename = "daily.mean.DO.FRK.all.years.png", 
+       filename = "daily.mean.DO.FRK.all.years.png",
        device = "png",
-       scale=1.0, 
+       scale=1.0,
        units="in",
        height=10,
-       width=8, 
+       width=8,
        dpi="print")
 
 ## Remove bad data
@@ -435,7 +455,7 @@ FRK.pH.mean <- FRK.pH.mean %>%
   mutate(Year = as.character(FRK.pH.mean$Year))
 
 daily.median.pH.plot <- ggplot(FRK.pH.mean, aes(x = Julian, y = mean_pH, color = Year)) +
-  theme(panel.background = element_rect(fill = "white", linetype = 0)) + 
+  theme(panel.background = element_rect(fill = "white", linetype = 0)) +
   theme(panel.grid.minor = element_blank()) +
   #geom_errorbar(aes(ymin=Mean-SD, ymax=Mean+SD), width=1,  position=position_dodge(.9)) +
   #geom_point(data = subset(FRK.pH.mean, Year == "2021"), size = 1) +
@@ -445,22 +465,22 @@ daily.median.pH.plot <- ggplot(FRK.pH.mean, aes(x = Julian, y = mean_pH, color =
   #scale_color_manual(name = "Basin Plan Criteria", guide = "legend", values = c("darkgreen","yellow3","red")) +
   #geom_hline(aes(yintercept=6.5, linetype="6.5 mg/L"), color = "orange") +
   #geom_hline(aes(yintercept=6.0, linetype="6.0 mg/L"), color = "orange") +
-  #scale_linetype_manual(name = "Limits", values = c(1,2), 
+  #scale_linetype_manual(name = "Limits", values = c(1,2),
   #                      guide = guide_legend(override.aes = list(linetype = c(1,2),
   #                                                               color = c("orange","orange")))) +
   #scale_x_date(date_breaks = "2 day") +
   #geom_smooth(method="loess", span=0.3, size = 2) +
   labs(x = "Date",
-       y = "pH") 
+       y = "pH")
 
 daily.median.pH.plot +
   scale_color_brewer(palette = "Set2", name = "Site")
 
 ggsave(path="plots",
-       filename = "daily.median.pH.FRK.all.years.pdf", 
+       filename = "daily.median.pH.FRK.all.years.pdf",
        device = "pdf",
-       scale=1.0, 
+       scale=1.0,
        units="in",
        height=5,
-       width=6.5, 
+       width=6.5,
        dpi="print")
